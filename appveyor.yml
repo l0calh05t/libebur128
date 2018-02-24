@@ -13,9 +13,8 @@ init:
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15 2017%arch%" )
   - echo %generator%
 before_build:
-  - cmd:
-    - mkdir build
-    - cd build
-    - cmake -G %generator% ..
+  - mkdir build
+  - cd build
+  - cmake -G %generator% ..
 build:
   project: c:\projects\libebur128\build\libebur128.sln
