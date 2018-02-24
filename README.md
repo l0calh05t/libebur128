@@ -2,7 +2,7 @@ libebur128
 ==========
 
 [![Build Status](https://travis-ci.org/l0calh05t/libebur128.svg?branch=travis)](https://travis-ci.org/l0calh05t/libebur128)
-[![Build status](https://ci.appveyor.com/api/projects/status/8t55jc08nlu4npav?svg=true)](https://ci.appveyor.com/project/l0calh05t/libebur128)
+[![Build status](https://ci.appveyor.com/api/projects/status/8t55jc08nlu4npav/branch/travis?svg=true)](https://ci.appveyor.com/project/l0calh05t/libebur128)
 
 libebur128 is a library that implements the EBU R 128 standard for loudness
 normalisation.
