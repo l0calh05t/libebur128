@@ -7,7 +7,7 @@ environment:
   matrix:
     - PLATFORM: x64
       arch: " Win64"
-    - PLATFORM: x86
+    - PLATFORM: Win32
       arch: ""
 init:
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15 2017%arch%" )
