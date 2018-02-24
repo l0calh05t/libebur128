@@ -22,14 +22,26 @@ int main(int ac, const char* av[]) {
   }
 
   sts = malloc((size_t) (ac - 1) * sizeof(ebur128_state*));
+  if (!sts) {
+    fprintf(stderr, "malloc failed\n");
+    return 1;
+  }
 
   for (i = 0; i < ac - 1; ++i) {
     memset(&file_info, '\0', sizeof(file_info));
     file = sf_open(av[i + 1], SFM_READ, &file_info);
+    if (!file) {
+      fprintf(stderr, "Could not open file with sf_open!\n");
+      return 1;
+    }
 
     sts[i] = ebur128_init((unsigned) file_info.channels,
                           (unsigned) file_info.samplerate,
                           EBUR128_MODE_I);
+    if (!sts[i]) {
+      fprintf(stderr, "Could not create ebur128_state!\n");
+      return 1;
+    }
 
     /* example: set channel map (note: see ebur128.h for the default map) */
     if (file_info.channels == 5) {
@@ -41,6 +53,11 @@ int main(int ac, const char* av[]) {
     }
 
     buffer = (double*) malloc(sts[i]->samplerate * sts[i]->channels * sizeof(double));
+    if (!buffer) {
+      fprintf(stderr, "malloc failed\n");
+      return 1;
+    }
+
     while ((nr_frames_read = sf_readf_double(file, buffer,
                                              (sf_count_t) sts[i]->samplerate))) {
       ebur128_add_frames_double(sts[i], buffer, (size_t) nr_frames_read);

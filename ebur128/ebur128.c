@@ -116,7 +116,7 @@ static interpolator* interp_create(unsigned int taps, unsigned int factor, unsig
   /* One delay buffer per channel. */
   interp->z = calloc(interp->channels, sizeof(float*));
   for (j = 0; j < interp->channels; j++) {
-    interp->z[j] = calloc( interp->delay, sizeof(float) );
+    interp->z[j] = calloc(interp->delay, sizeof(float));
   }
 
   /* Calculate the filter coefficients */
@@ -179,7 +179,7 @@ static size_t interp_process(interpolator* interp, size_t frames, float* in, flo
         for (t = 0; t < interp->filter[f].count; t++) {
           int i = (int)interp->zi - (int)interp->filter[f].index[t];
           if (i < 0) {
-            i += interp->delay;
+            i += (int)interp->delay;
           }
           c = interp->filter[f].coeff[t];
           acc += interp->z[chan][i] * c;
@@ -343,6 +343,23 @@ void ebur128_get_version(int* major, int* minor, int* patch) {
   *patch = EBUR128_VERSION_PATCH;
 }
 
+#define VALIDATE_MAX_CHANNELS (64)
+#define VALIDATE_MAX_SAMPLERATE (2822400)
+#define VALIDATE_MAX_WINDOW                                                    \
+  ((3ul << 30) / VALIDATE_MAX_SAMPLERATE / VALIDATE_MAX_CHANNELS /             \
+   sizeof(double))
+
+#define VALIDATE_CHANNELS_AND_SAMPLERATE(err)                                  \
+  do {                                                                         \
+    if (channels == 0 || channels > VALIDATE_MAX_CHANNELS) {                   \
+      return (err);                                                            \
+    }                                                                          \
+                                                                               \
+    if (samplerate < 16 || samplerate > VALIDATE_MAX_SAMPLERATE) {             \
+      return (err);                                                            \
+    }                                                                          \
+  } while (0);
+
 ebur128_state* ebur128_init(unsigned int channels,
                             unsigned long samplerate,
                             int mode) {
@@ -352,9 +369,7 @@ ebur128_state* ebur128_init(unsigned int channels,
   unsigned int i;
   size_t j;
 
-  if (channels == 0 || samplerate < 5) {
-    return NULL;
-  }
+  VALIDATE_CHANNELS_AND_SAMPLERATE(NULL);
 
   st = (ebur128_state*) malloc(sizeof(ebur128_state));
   CHECK_ERROR(!st, 0, exit)
@@ -563,7 +578,7 @@ static void ebur128_filter_##type(ebur128_state* st, const type* src,          \
       for (i = 0; i < frames; ++i) {                                           \
         if (src[i * st->channels + c] > max) {                                 \
           max =        src[i * st->channels + c];                              \
-        } else if (-src[i * st->channels + c] > max) {                         \
+        } else if (-1.0 * src[i * st->channels + c] > max) {                   \
           max = -1.0 * src[i * st->channels + c];                              \
         }                                                                      \
       }                                                                        \
@@ -723,9 +738,7 @@ int ebur128_change_parameters(ebur128_state* st,
   int errcode = EBUR128_SUCCESS;
   size_t j;
 
-  if (channels == 0 || samplerate < 5) {
-    return EBUR128_ERROR_NOMEM;
-  }
+  VALIDATE_CHANNELS_AND_SAMPLERATE(EBUR128_ERROR_NOMEM);
 
   if (channels == st->channels &&
       samplerate == st->samplerate) {
@@ -798,8 +811,7 @@ exit:
   return errcode;
 }
 
-int ebur128_set_max_window(ebur128_state* st, unsigned long window)
-{
+int ebur128_set_max_window(ebur128_state* st, unsigned long window) {
   int errcode = EBUR128_SUCCESS;
   size_t j;
 
@@ -808,8 +820,13 @@ int ebur128_set_max_window(ebur128_state* st, unsigned long window)
   } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M && window < 400) {
     window = 400;
   }
+
   if (window == st->d->window) {
     return EBUR128_ERROR_NO_CHANGE;
+  }
+
+  if (window >= VALIDATE_MAX_WINDOW) {
+    return EBUR128_ERROR_NOMEM;
   }
 
   st->d->window = window;
@@ -841,8 +858,7 @@ exit:
   return errcode;
 }
 
-int ebur128_set_max_history(ebur128_state* st, unsigned long history)
-{
+int ebur128_set_max_history(ebur128_state* st, unsigned long history) {
   if ((st->mode & EBUR128_MODE_LRA) == EBUR128_MODE_LRA && history < 3000) {
     history = 3000;
   } else if ((st->mode & EBUR128_MODE_M) == EBUR128_MODE_M && history < 400) {
@@ -1113,8 +1129,15 @@ int ebur128_loudness_window(ebur128_state* st,
                             unsigned long window,
                             double* out) {
   double energy;
-  size_t interval_frames = st->samplerate * window / 1000;
-  int error = ebur128_energy_in_interval(st, interval_frames, &energy);
+  size_t interval_frames;
+  int error;
+
+  if (window >= VALIDATE_MAX_WINDOW) {
+    return EBUR128_ERROR_INVALID_MODE;
+  }
+
+  interval_frames = st->samplerate * window / 1000;
+  error = ebur128_energy_in_interval(st, interval_frames, &energy);
   if (error) {
     return error;
   } else if (energy <= 0.0) {
