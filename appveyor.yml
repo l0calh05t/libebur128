@@ -3,12 +3,12 @@ image:
 configuration:
   - Release
   - Debug
-platform:
-  - x64
 environment:
   matrix:
-    - arch: " Win64"
-    - arch: ""
+    - PLATFORM: x64
+      arch: " Win64"
+    - PLATFORM: x86
+      arch: ""
 init:
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15 2017%arch%" )
   - echo %generator%
