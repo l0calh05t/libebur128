@@ -49,6 +49,11 @@ add_library(ebur128 SHARED ${EBUR128_SHARED_SOURCE})
 set_target_properties(ebur128 PROPERTIES
     SOVERSION ${EBUR128_VERSION_MAJOR}
     VERSION ${EBUR128_VERSION})
+if(ENABLE_FUZZER)
+  target_compile_options(ebur128 PUBLIC "${FUZZER_FLAGS}")
+  target_compile_definitions(ebur128 PRIVATE malloc=my_malloc calloc=my_calloc)
+  target_link_libraries(ebur128 "${SANITIZER_FLAGS}")
+endif()
 
 find_library(MATH_LIBRARY m)
 if(MATH_LIBRARY)
